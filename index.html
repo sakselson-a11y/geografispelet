@@ -17,7 +17,7 @@
 <title>Blindkarta</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Spline+Sans+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Spline+Sans+Mono:wght@500&display=swap">
 <style>
 /* Layout: one-screen app — question bar on top, map fills the rest, overlays for start and result */
 /* Layout: one-screen app — question bar on top, map fills the rest, overlays for start and result. Lekfull: bright sea, rounded type, chunky press-able buttons */
@@ -27,7 +27,8 @@
   --ink:#17284a; --muted:#4b5f80; --panel:#ffffff; --panel-line:#cfe3f1;
   --ok:#2fbf5f; --ok-soft:#d3f3dd; --bad:#ff5b4a; --miss:#ff9f1c; --miss-soft:#ffe6c2;
   --accent:#ff7a2f; --accent-deep:#c95a1c; --on-accent:#ffffff;
-  --f-ui:"Baloo 2",ui-rounded,system-ui,-apple-system,sans-serif;
+  --f-ui:"Nunito",ui-rounded,system-ui,-apple-system,sans-serif;
+  --chip:color-mix(in srgb,var(--ink) 6%,var(--panel));
   --f-num:"Spline Sans Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -71,7 +72,7 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
 .lbl.miss{fill:var(--ink)}
 .zoom{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:max(14px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
 .zoom button{appearance:none;width:46px;height:46px;border-radius:16px;border:2px solid var(--panel-line);background:var(--panel);
-  color:var(--ink);font:700 24px var(--f-ui);cursor:pointer;box-shadow:0 3px 0 var(--panel-line)}
+  color:var(--ink);font:700 24px/1 var(--f-ui);cursor:pointer;display:grid;place-items:center;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .zoom button:focus-visible,.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-6px);opacity:0;pointer-events:none;
   background:var(--panel);border:1px solid var(--panel-line);border-radius:999px;padding:6px 20px;font-weight:800;font-size:19px;
@@ -87,22 +88,22 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .card{background:var(--panel);border:2px solid var(--panel-line);border-radius:28px;width:min(420px,100%);
   max-height:100%;overflow:auto;padding:24px 22px;display:flex;flex-direction:column;gap:18px;box-shadow:0 18px 50px rgba(0,0,0,.18)}
-.card h1{margin:0;font-size:34px;font-weight:800;line-height:1.05;letter-spacing:-.02em;text-wrap:balance}
+.card h1{margin:0;font-size:32px;font-weight:900;line-height:1.05;letter-spacing:-.02em;text-wrap:balance}
 .card h1 span{color:var(--accent)}
 .card p{margin:0;color:var(--muted);line-height:1.45}
 .lab{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.chip{appearance:none;border:2px solid var(--panel-line);background:var(--panel);color:var(--ink);border-radius:18px;
-  padding:11px 0 9px;font:700 18px var(--f-ui);cursor:pointer;box-shadow:0 3px 0 var(--panel-line);transition:transform .08s,box-shadow .08s}
-.chip:active,.ans:active:not(:disabled),.zoom button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--panel-line)}
+.chip{appearance:none;border:0;background:var(--chip);color:var(--ink);border-radius:12px;min-height:46px;padding:6px 8px;
+  display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;
+  font:700 16px/1.15 var(--f-ui);cursor:pointer;transition:transform .08s,background .15s,color .15s}
+.chip:active,.ans:active:not(:disabled),.zoom button:active{transform:scale(.97)}
 .conts{grid-template-columns:repeat(2,1fr)}
-.conts .chip{font-size:16px;padding:11px 0}
-.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent);box-shadow:0 3px 0 var(--accent-deep)}
-.btn{appearance:none;border:0;border-radius:18px;padding:14px 18px 12px;font:800 20px var(--f-ui);cursor:pointer;
-  background:var(--accent);color:var(--on-accent);width:100%;box-shadow:0 5px 0 var(--accent-deep);transition:transform .08s,box-shadow .08s}
-.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--accent-deep)}
-.btn.sec{background:var(--panel);color:var(--ink);border:2px solid var(--panel-line);box-shadow:0 4px 0 var(--panel-line)}
-.btn.sec:active{box-shadow:0 1px 0 var(--panel-line)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.btn{appearance:none;border:0;border-radius:14px;min-height:54px;padding:8px 18px;display:flex;align-items:center;justify-content:center;
+  font:800 18px/1.1 var(--f-ui);cursor:pointer;background:var(--accent);color:var(--on-accent);width:100%;
+  box-shadow:0 3px 0 var(--accent-deep);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--accent-deep)}
+.btn.sec{background:var(--chip);color:var(--ink);box-shadow:none}
 .row{display:flex;gap:10px}
 .score{font-family:var(--f-num);font-size:54px;line-height:1;letter-spacing:-.03em}
 .score small{font-size:22px;color:var(--muted)}
@@ -114,10 +115,11 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
 .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--sw)}
 .answers{background:var(--panel);border-top:2px solid var(--panel-line);display:grid;grid-template-columns:1fr 1fr;gap:8px;
   padding-block:10px 12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.ans{appearance:none;border:2px solid var(--panel-line);background:var(--panel);color:var(--ink);border-radius:18px;
-  min-height:54px;padding:8px 10px 6px;font:700 18px/1.15 var(--f-ui);cursor:pointer;text-wrap:balance;box-shadow:0 3px 0 var(--panel-line);transition:transform .08s,box-shadow .08s}
-.ans.ok{background:var(--ok);border-color:var(--ok);color:var(--on-accent);box-shadow:0 3px 0 color-mix(in srgb,var(--ok) 70%,#000)}
-.ans.bad{background:var(--bad);border-color:var(--bad);color:var(--on-accent);box-shadow:0 3px 0 color-mix(in srgb,var(--bad) 70%,#000)}
+.ans{appearance:none;border:2px solid var(--panel-line);background:var(--panel);color:var(--ink);border-radius:14px;
+  min-height:54px;padding:6px 10px;display:flex;align-items:center;justify-content:center;text-align:center;
+  font:700 17px/1.15 var(--f-ui);cursor:pointer;text-wrap:balance;transition:transform .08s}
+.ans.ok{background:var(--ok);border-color:var(--ok);color:var(--on-accent)}
+.ans.bad{background:var(--bad);border-color:var(--bad);color:var(--on-accent)}
 .ans:disabled{cursor:default}
 .ans:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .modes{grid-template-columns:repeat(2,1fr)}
@@ -126,29 +128,39 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
 .flagbox img{height:clamp(96px,22vh,170px);aspect-ratio:4/3;max-width:100%;object-fit:cover;border-radius:10px;
   box-shadow:0 0 0 1px var(--panel-line),0 6px 18px rgba(0,0,0,.14);background:var(--land-ctx)}
 .list .fl{width:22px;height:16.5px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px var(--panel-line);flex:none;align-self:center}
-.modes .chip{font-size:15px;padding:11px 4px}
 .toggle{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:500;line-height:1.3}
 .toggle input{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:46px;height:28px;border-radius:999px;background:var(--panel-line);position:relative;cursor:pointer;transition:background .2s}
-.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
 .toggle input:checked{background:var(--accent)}
 .toggle input:checked::after{transform:translateX(18px)}
 .toggle input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .lbl .cap{font-weight:500;fill:var(--muted)}
 .dot.city{fill:var(--panel);stroke:var(--ink);stroke-width:2}
 .dot.city.ok{fill:var(--ok);stroke:var(--ink)} .dot.city.bad{fill:var(--bad);stroke:var(--ink)} .dot.city.miss{fill:var(--miss);stroke:var(--ink)} .dot.city.sel{fill:var(--accent);stroke:var(--ink)}
-.conts .chip{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.1}
-.cst{font-size:13px;letter-spacing:1px;color:var(--miss);min-height:14px}
+.cst{font-size:12px;letter-spacing:.5px;color:var(--miss)}
+.cst:empty{display:none}
 .chip[aria-pressed="true"] .cst{color:var(--on-accent)}
 .conts .chip.se{grid-column:1/-1}
-.rec{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;color:var(--muted);margin-top:-6px;text-align:center}
-.rec b{color:var(--miss);letter-spacing:2px;font-size:18px}
+.rec{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14px;color:var(--muted);text-align:center}
+.rec b{color:var(--miss);letter-spacing:1px;font-size:15px}
 .bigstars{font-size:40px;letter-spacing:4px;color:var(--miss);line-height:1;margin-top:6px}
 .bigstars .off{color:var(--panel-line)}
 .newrec{display:inline-block;background:var(--miss);color:var(--on-accent);font-weight:800;border-radius:999px;padding:3px 12px 1px;margin-left:8px;font-size:15px;vertical-align:middle;
   animation:pop .5s cubic-bezier(.3,1.6,.5,1) both}
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
 #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
-.toggles{display:flex;flex-direction:column;gap:12px}
+.toggles{display:flex;flex-direction:column;border:1px solid var(--panel-line);border-radius:14px;overflow:hidden}
+.toggles .toggle{justify-content:space-between;padding:12px 14px;font-weight:600;font-size:15px}
+.toggles .toggle+.toggle{border-top:1px solid var(--panel-line)}
+.st{gap:22px;padding-bottom:0}
+.card>*{flex-shrink:0}
+.st-head{display:flex;flex-direction:column;gap:8px}
+.st-head .lab{margin:0}
+.st-head p{font-size:15px}
+.field h2{margin:0 0 10px;font-size:16px;font-weight:800;color:var(--ink);letter-spacing:0}
+.st-foot{position:sticky;bottom:0;margin:0 -22px;padding:12px 22px max(18px,env(safe-area-inset-bottom,0px));background:var(--panel);
+  border-top:1px solid var(--panel-line);display:flex;flex-direction:column;gap:8px}
+.st-foot #gonote{text-align:center;font-size:13px}
 @media (prefers-reduced-motion: reduce){.c,.toast{transition:none}.newrec{animation:none}}
 </style>
 
@@ -175,36 +187,38 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
 </div>
 
 <div class="ov" id="start">
-  <div class="card">
-    <div>
+  <div class="card st">
+    <header class="st-head">
       <div class="lab">Blindkarta</div>
       <h1><span id="h1mode">Hitta landet i</span> <span id="h1cont">Europa</span></h1>
-    </div>
-    <p id="howto"></p>
-    <div>
-      <div class="lab">Spelläge</div>
-      <div class="chips modes" id="modes"></div>
-    </div>
-    <div>
-      <div class="lab">Världsdel</div>
+      <p id="howto"></p>
+    </header>
+    <section class="field">
+      <h2>Karta</h2>
       <div class="chips conts" id="conts"></div>
-    </div>
-    <div>
-      <div class="lab">Antal</div>
+    </section>
+    <section class="field">
+      <h2>Spelläge</h2>
+      <div class="chips modes" id="modes"></div>
+    </section>
+    <section class="field">
+      <h2>Antal frågor</h2>
       <div class="chips" id="chips">
         <button class="chip" data-n="5" aria-pressed="false">5</button>
         <button class="chip" data-n="10" aria-pressed="true">10</button>
         <button class="chip" data-n="15" aria-pressed="false">15</button>
         <button class="chip" data-n="0" aria-pressed="false">Alla</button>
       </div>
-    </div>
-    <div class="toggles">
-      <label class="toggle" for="showfix"><input type="checkbox" id="showfix"><span>Visa rätt svar direkt när jag svarar fel</span></label>
-      <label class="toggle" for="sound"><input type="checkbox" id="sound"><span>Ljud</span></label>
-    </div>
-    <div class="rec" id="rec"></div>
-    <button class="btn" id="go">Starta</button>
-    <p id="gonote" style="text-align:center;font-size:13px;margin-top:-8px"></p>
+    </section>
+    <section class="toggles" aria-label="Inställningar">
+      <label class="toggle" for="showfix"><span>Visa rätt svar direkt vid fel</span><input type="checkbox" id="showfix"></label>
+      <label class="toggle" for="sound"><span>Ljud</span><input type="checkbox" id="sound"></label>
+    </section>
+    <footer class="st-foot">
+      <div class="rec" id="rec"></div>
+      <button class="btn" id="go">Starta</button>
+      <p id="gonote"></p>
+    </footer>
   </div>
 </div>
 
