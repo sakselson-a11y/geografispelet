@@ -23,7 +23,7 @@ const C={
 };
 const EXCLUDE=new Set(["Vatican","Monaco","San Marino","Malta",
  "Cabo Verde","Comoros","Mauritius","Seychelles","São Tomé and Principe",
- "Bahrain","Singapore","Maldives",
+ "Bahrain","Singapore","Maldives","Palestine",
  "Antigua and Barb.","Barbados","Dominica","Grenada","Saint Lucia","St. Kitts and Nevis","St. Vin. and Gren.","Trinidad and Tobago","Bahamas",
  "Nauru","Palau","Marshall Is.","Micronesia","Kiribati","Tonga","Samoa","Vanuatu"]);
 for(const cfg of Object.values(C)) for(const k of Object.keys(cfg.c)) if(EXCLUDE.has(k)) delete cfg.c[k];
