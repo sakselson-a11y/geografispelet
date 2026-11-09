@@ -6,7 +6,7 @@ const drop=new Set(Object.values(merges).flat().concat(["Antarctica"]));
 const feats=[];
 for(const g of G){const n=g.properties.name; if(drop.has(n))continue;
   const geom=merges[n]?topo.merge(t,G.filter(x=>x.properties.name===n||merges[n].includes(x.properties.name))):topo.feature(t,g).geometry;
-  feats.push({type:"Feature",properties:{name:n},geometry:geom});}
+  feats.push({type:"Feature",id:g.id,properties:{name:n},geometry:geom});}
 const C={
  europa:{name:"Europa",rot:[-14,0],par:[40,64],pts:[[-24,63],[-10,35.5],[34,34.5],[50,62],[30,71.2],[45,40]],fix:{"Russia":[40,57],"Norway":[9.5,61.5]},
  c:{"Albania":"Albanien","Andorra":"Andorra","Austria":"Österrike","Belarus":"Belarus","Belgium":"Belgien","Bosnia and Herz.":"Bosnien och Hercegovina","Bulgaria":"Bulgarien","Croatia":"Kroatien","Cyprus":"Cypern","Czechia":"Tjeckien","Denmark":"Danmark","Estonia":"Estland","Finland":"Finland","France":"Frankrike","Germany":"Tyskland","Greece":"Grekland","Hungary":"Ungern","Iceland":"Island","Ireland":"Irland","Italy":"Italien","Kosovo":"Kosovo","Latvia":"Lettland","Liechtenstein":"Liechtenstein","Lithuania":"Litauen","Luxembourg":"Luxemburg","Malta":"Malta","Moldova":"Moldavien","Monaco":"Monaco","Montenegro":"Montenegro","Netherlands":"Nederländerna","Macedonia":"Nordmakedonien","Norway":"Norge","Poland":"Polen","Portugal":"Portugal","Romania":"Rumänien","Russia":"Ryssland","San Marino":"San Marino","Serbia":"Serbien","Slovakia":"Slovakien","Slovenia":"Slovenien","Spain":"Spanien","Sweden":"Sverige","Switzerland":"Schweiz","Ukraine":"Ukraina","United Kingdom":"Storbritannien","Vatican":"Vatikanstaten"}},
@@ -33,6 +33,7 @@ const CAP={"Albania":"Tirana","Andorra":"Andorra la Vella","Austria":"Wien","Bel
 "Belize":"Belmopan","Canada":"Ottawa","Costa Rica":"San José","Cuba":"Havanna","Dominican Rep.":"Santo Domingo","El Salvador":"San Salvador","Guatemala":"Guatemala City","Haiti":"Port-au-Prince","Honduras":"Tegucigalpa","Jamaica":"Kingston","Mexico":"Mexico City","Nicaragua":"Managua","Panama":"Panama City","United States of America":"Washington D.C.",
 "Argentina":"Buenos Aires","Bolivia":"Sucre","Brazil":"Brasília","Chile":"Santiago","Colombia":"Bogotá","Ecuador":"Quito","Guyana":"Georgetown","Paraguay":"Asunción","Peru":"Lima","Suriname":"Paramaribo","Uruguay":"Montevideo","Venezuela":"Caracas",
 "Australia":"Canberra","New Zealand":"Wellington","Papua New Guinea":"Port Moresby","Fiji":"Suva","Solomon Is.":"Honiara"};
+const iso=require("i18n-iso-countries"), path_=require("path"), usedFlags=new Set();
 const W=1000,H=860, out={};
 function labelPt(f){ // centroid of largest polygon
   const g=f.geometry; if(g.type==="Polygon") return d3.geoCentroid(f);
@@ -46,7 +47,7 @@ for(const [key,cfg] of Object.entries(C)){
   for(const f of feats){const n=f.properties.name; const d=path(f); if(!d)continue;
     if(cfg.c[n]){const area=path.area(f);
       const c=proj(cfg.fix[n]||labelPt(f)).map(v=>Math.round(v*10)/10);
-      const o={k:n,n:cfg.c[n],d,c,m:(area<40||n==="Luxembourg")?1:0,a:Math.round(area)}; if(CAP[n]) o.h=CAP[n]; cs.push(o);}
+      const o={k:n,n:cfg.c[n],d,c,m:(area<40||n==="Luxembourg")?1:0,a:Math.round(area)}; if(CAP[n]) o.h=CAP[n]; o.f=n==="Kosovo"?"xk":iso.numericToAlpha2(f.id).toLowerCase(); usedFlags.add(o.f); cs.push(o);}
     else ctx.push(d);}
   const miss=Object.keys(cfg.c).filter(k=>!cs.find(o=>o.k===k));
   console.log(key,cs.length,"nocap:",cs.filter(c=>!c.h).map(c=>c.k),"missing:",miss,"micro:",cs.filter(c=>c.m).map(c=>c.k+"("+c.a+")").join(","));
@@ -57,3 +58,9 @@ const data=JSON.stringify({W,H,maps:out});
 const page=fs.readFileSync(__dirname+"/template.html","utf8").replace("__DATA__",()=>data);
 fs.writeFileSync(__dirname+"/../index.html",fs.readFileSync(__dirname+"/head.html","utf8")+page.split("\n").filter(l=>!l.includes("apple-mobile-web-app-capable")).join("\n")+"\n</body>\n</html>\n");
 if(process.argv[2]) fs.writeFileSync(process.argv[2],page);
+
+// copy the flags in use to /flags
+const fdir=path_.join(__dirname,"..","flags"); fs.rmSync(fdir,{recursive:true,force:true}); fs.mkdirSync(fdir);
+const srcDir=path_.join(path_.dirname(require.resolve("flag-icons/package.json")),"flags","4x3");
+for(const f of usedFlags) fs.copyFileSync(path_.join(srcDir,f+".svg"),path_.join(fdir,f+".svg"));
+console.log("flags",usedFlags.size);

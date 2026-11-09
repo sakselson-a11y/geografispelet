@@ -101,7 +101,12 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
 .ans.bad{background:var(--bad);border-color:var(--bad);color:var(--panel)}
 .ans:disabled{cursor:default}
 .ans:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.modes{grid-template-columns:repeat(3,1fr)}
+.modes{grid-template-columns:repeat(2,1fr)}
+.flagbox{background:var(--panel);border-bottom:1px solid var(--panel-line);display:flex;justify-content:center;align-items:center;
+  padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.flagbox img{height:clamp(96px,22vh,170px);aspect-ratio:4/3;max-width:100%;object-fit:cover;border-radius:6px;
+  box-shadow:0 0 0 1px var(--panel-line),0 6px 18px rgba(0,0,0,.14);background:var(--land-ctx)}
+.list .fl{width:22px;height:16.5px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px var(--panel-line);flex:none;align-self:center}
 .modes .chip{font-size:15px;padding:11px 4px}
 .toggle{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:500;line-height:1.3}
 .toggle input{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:46px;height:28px;border-radius:999px;background:var(--panel-line);position:relative;cursor:pointer;transition:background .2s}
@@ -119,6 +124,7 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
     <div class="prog" id="prog"></div>
     <button class="iconbtn" id="menu" aria-label="Avsluta och välj nytt spel">✕</button>
   </header>
+  <div class="flagbox" id="flagbox" hidden><img id="flagimg" alt="Flagga"></div>
   <div class="mapwrap" id="wrap">
     <svg id="map" viewBox="0 0 1000 860" preserveAspectRatio="xMidYMid meet" aria-label="Blindkarta">
       <rect id="sea" x="-5000" y="-5000" width="11000" height="11000"/>
@@ -147,6 +153,7 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
         <button class="chip" data-m="land" aria-pressed="true">Länder</button>
         <button class="chip" data-m="cap" aria-pressed="false">Huvud&shy;städer</button>
         <button class="chip" data-m="name" aria-pressed="false">Välj namn</button>
+        <button class="chip" data-m="flag" aria-pressed="false">Flaggor</button>
       </div>
     </div>
     <div>
@@ -276,12 +283,15 @@ addEventListener("resize",()=>apply());
 
 // ---------- game ----------
 let N=10, queue=[], idx=0, results=[], mode="idle", busy=false, MODE="land", SHOWFIX=false;
-try{const m=localStorage.getItem("bk-mode"); if(["land","cap","name"].includes(m)) MODE=m; SHOWFIX=localStorage.getItem("bk-fix")==="1";}catch(e){}
+try{const m=localStorage.getItem("bk-mode"); if(["land","cap","name","flag"].includes(m)) MODE=m; SHOWFIX=localStorage.getItem("bk-fix")==="1";}catch(e){}
 const MODEINFO={
   land:{h:"Hitta landet i",how:"Ett land visas överst. Tryck på var det ligger. Rätt svar blir grönt och ligger kvar. Svarar du fel går du vidare till nästa land."},
   cap:{h:"Huvudstäder i",how:"En huvudstad visas överst, till exempel Berlin. Tryck på landet där den ligger. Rätt svar blir grönt och ligger kvar."},
+  flag:{h:"Flaggor i",how:"En flagga visas. Välj vilket land den tillhör bland fyra alternativ. Rätt svar blir grönt på kartan."},
   name:{h:"Namnge länderna i",how:"Ett land lyses upp på kartan. Välj rätt namn bland fyra alternativ. Rätt svar blir grönt och ligger kvar."}
 };
+const CHOICE=()=>MODE==="name"||MODE==="flag";
+const flagSrc=c=>"flags/"+c.f+".svg";
 function pool(){ return MODE==="cap" ? DATA.countries.filter(c=>c.h) : DATA.countries; }
 function save(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 document.querySelectorAll("#chips .chip").forEach(b=>b.onclick=()=>{
@@ -295,7 +305,7 @@ document.querySelectorAll("#modes .chip").forEach(b=>{
 });
 $("showfix").checked=SHOWFIX;
 $("showfix").onchange=e=>{SHOWFIX=e.target.checked; save("bk-fix",SHOWFIX?"1":"0");};
-function updateNote(){ if(!DATA)return; const tot=pool().length, what=MODE==="cap"?"huvudstäder":"länder";
+function updateNote(){ if(!DATA)return; const tot=pool().length, what=MODE==="cap"?"huvudstäder":MODE==="flag"?"flaggor":"länder";
   $("gonote").textContent=(N&&N<tot?N+" av ":"Alla ")+tot+" "+what+" i "+DATA.name;
   $("h1mode").textContent=MODEINFO[MODE].h; $("howto").textContent=MODEINFO[MODE].how; }
 const conts=$("conts");
@@ -320,16 +330,19 @@ function start(list){ buildMap(CONT);
   const src=list?list.map(c=>byKey[c.k]):pool(); const all=shuffle(src.slice());
   queue=(!list&&N)?all.slice(0,N):all; idx=0; results=[];
   DATA.countries.forEach(c=>setClass(c,"")); clearLabels();
-  $("start").hidden=true; $("end").hidden=true; mode="play"; $("answers").hidden=MODE!=="name";
+  $("start").hidden=true; $("end").hidden=true; mode="play"; $("answers").hidden=!CHOICE(); $("flagbox").hidden=MODE!=="flag";
   animateTo(1,0,0); show();
 }
 function show(){
   const c=queue[idx];
   if(MODE==="name"){ $("qlab").textContent="Välj namn"; $("qname").textContent="Vilket land?"; }
+  else if(MODE==="flag"){ $("qlab").textContent="Flaggor"; $("qname").textContent="Vilket land?"; $("flagimg").src=flagSrc(c);
+    const nx=queue[idx+1]; if(nx){const im=new Image(); im.src=flagSrc(nx);} }
   else { $("qlab").textContent="Var ligger"; $("qname").textContent=MODE==="cap"?c.h:c.n; }
   const ok=results.filter(r=>r.ok).length;
   $("prog").innerHTML=`${idx+1} / ${queue.length}<br><b>${ok} rätt</b>`;
-  if(MODE==="name"){ setClass(c,"sel"); zoomToCountry(c); renderOptions(c); }
+  if(MODE==="name"){ setClass(c,"sel"); zoomToCountry(c); }
+  if(CHOICE()) renderOptions(c);
 }
 function renderOptions(c){
   const others=DATA.countries.filter(x=>x!==c);
@@ -347,7 +360,8 @@ function answer(o,btn){
   for(let i=0;i<4;i++) $("a"+i).disabled=true;
   if(o===target){ btn.classList.add("ok"); setClass(target,"ok"); results.push({c:target,ok:true}); toast("Rätt!","ok"); setTimeout(next,700); }
   else { btn.classList.add("bad"); results.push({c:target,ok:false});
-    if(SHOWFIX){ for(let i=0;i<4;i++){const b=$("a"+i); if(b.textContent===target.n) b.classList.add("ok");} toast("Fel – det är "+target.n,"bad"); }
+    if(SHOWFIX){ for(let i=0;i<4;i++){const b=$("a"+i); if(b.textContent===target.n) b.classList.add("ok");} toast("Fel – det är "+target.n,"bad");
+      if(MODE==="flag") setClass(target,"miss"); }
     else toast("Fel","bad");
     setTimeout(()=>{ setClass(target,""); next(); }, SHOWFIX?1600:750); }
 }
@@ -355,7 +369,7 @@ let toastT;
 function toast(msg,cls,ms){const t=$("toast");t.textContent=msg;t.className="toast show "+cls;clearTimeout(toastT);toastT=setTimeout(()=>t.className="toast",ms||1100);}
 function onTap(k){
   if(mode==="facit"){ if(k&&byKey[k]) toast(byKey[k].n+(MODE==="cap"&&byKey[k].h?" · "+byKey[k].h:""),""); return; }
-  if(mode!=="play"||busy||!k||MODE==="name")return;
+  if(mode!=="play"||busy||!k||CHOICE())return;
   const target=queue[idx];
   if(k!=="__ctx" && byKey[k] && results.some(r=>r.ok&&r.c===byKey[k])){toast("Redan placerat","");return;}
   busy=true;
@@ -372,11 +386,11 @@ function onTap(k){
 }
 function next(){busy=false; idx++; if(idx>=queue.length) finish(); else show();}
 function finish(){
-  mode="done"; $("answers").hidden=true; const ok=results.filter(r=>r.ok).length, n=results.length, missed=n-ok;
+  mode="done"; $("answers").hidden=true; $("flagbox").hidden=true; const ok=results.filter(r=>r.ok).length, n=results.length, missed=n-ok;
   $("score").innerHTML=`${ok}<small> / ${n} rätt</small>`;
   const pct=ok/n;
   $("verdict").textContent= pct===1?"Alla rätt. Snyggt!": pct>=.7?"Bra jobbat!": pct>=.4?"Helt okej. Kolla facit och öva på de missade.":"Kolla facit och öva på de missade, så sitter det bättre nästa gång.";
-  $("list").innerHTML=results.map(r=>`<li class="${r.ok?"y":"n"}"><i>${r.ok?"✓":"✗"}</i><span>${MODE==="cap"?r.c.h+" – "+r.c.n:r.c.n}</span></li>`).join("");
+  $("list").innerHTML=results.map(r=>`<li class="${r.ok?"y":"n"}"><i>${r.ok?"✓":"✗"}</i>${MODE==="flag"?`<img class="fl" src="${flagSrc(r.c)}" alt="">`:""}<span>${MODE==="cap"?r.c.h+" – "+r.c.n:r.c.n}</span></li>`).join("");
   $("endrow").hidden = missed===0;
   $("practice").textContent = missed===1?"Öva på den missade":`Öva på de ${missed} missade`;
   $("qlab").textContent="Klart"; $("qname").textContent=`${ok} av ${n} rätt`; $("prog").innerHTML="";
@@ -399,6 +413,6 @@ $("go").onclick=()=>start();
 $("again").onclick=()=>{$("end").hidden=true;$("start").hidden=false;};
 $("facit").onclick=showFacit;
 $("practice").onclick=()=>start(missedList());
-$("menu").onclick=()=>{ if(mode==="facit"){mode="done";$("end").hidden=false;return;} mode="idle";$("answers").hidden=true;$("end").hidden=true;$("start").hidden=false; };
+$("menu").onclick=()=>{ if(mode==="facit"){mode="done";$("end").hidden=false;return;} mode="idle";$("answers").hidden=true;$("flagbox").hidden=true;$("end").hidden=true;$("start").hidden=false; };
 buildMap(CONT); apply();
 </script>
