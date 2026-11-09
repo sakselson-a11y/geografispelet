@@ -54,6 +54,39 @@ for(const [key,cfg] of Object.entries(C)){
   cs.forEach(c=>delete c.a);
   out[key]={name:cfg.name,countries:cs,context:ctx.join("")};
 }
+
+// ---------- Sverige: landskap + större städer ----------
+{
+  const tsrv=require("topojson-server"), tsim=require("topojson-simplify");
+  const raw=JSON.parse(fs.readFileSync(__dirname+"/data/svenska-landskap.geo.json","utf8"));
+  // d3 wants clockwise exterior rings (opposite of RFC 7946)
+  for(const f of raw.features){ if(d3.geoArea(f)>2*Math.PI){ const g=f.geometry;
+    if(g.type==="Polygon") g.coordinates.forEach(r=>r.reverse()); else g.coordinates.forEach(p=>p.forEach(r=>r.reverse())); } }
+  let topoSE=tsrv.topology({l:raw},1e6);
+  topoSE=tsim.presimplify(topoSE,tsim.sphericalTriangleArea);
+  topoSE=tsim.simplify(topoSE,1.2e-8);
+  const land=topo.feature(topoSE,topoSE.objects.l);
+  const SW=620,SH=1000;
+  const proj=d3.geoTransverseMercator().rotate([-16.5,-62.5]);
+  proj.fitExtent([[18,18],[SW-18,SH-18]],land);
+  proj.clipExtent([[-20,-20],[SW+20,SH+20]]);
+  const path=d3.geoPath(proj).digits(1);
+  const ctx=feats.filter(f=>f.properties.name!=="Sweden").map(f=>path(f)).filter(Boolean).join("");
+  const cs=land.features.map(f=>{const n=f.properties.landskap;
+    return {k:"l:"+n,n,d:path(f),c:proj(d3.geoCentroid(f)).map(v=>Math.round(v*10)/10),m:0};});
+  const fixL={"Bohuslän":[11.75,58.35],"Lappland":[17.5,66.8],"Uppland":[17.9,60.0],"Småland":[14.9,57.2]};
+  cs.forEach(c=>{const n=c.n; if(fixL[n]) c.c=proj(fixL[n]).map(v=>Math.round(v*10)/10);});
+  const CITIES=[["Stockholm",18.0686,59.3293],["Göteborg",11.9746,57.7089],["Malmö",13.0038,55.605],["Uppsala",17.6389,59.8586],
+   ["Västerås",16.5448,59.6099],["Örebro",15.2134,59.2753],["Linköping",15.6214,58.4108],["Helsingborg",12.6945,56.0465],
+   ["Jönköping",14.1618,57.7826],["Norrköping",16.1924,58.5877],["Lund",13.191,55.7047],["Umeå",20.263,63.8258],
+   ["Gävle",17.1413,60.6749],["Borås",12.9401,57.721],["Eskilstuna",16.5099,59.371],["Halmstad",12.8578,56.6745],
+   ["Växjö",14.8091,56.8777],["Karlstad",13.5115,59.4022],["Sundsvall",17.3069,62.3908],["Luleå",22.1547,65.5848],
+   ["Östersund",14.6357,63.1792],["Kalmar",16.3568,56.6634],["Kristianstad",14.1567,56.0294],["Falun",15.6355,60.6065],
+   ["Skellefteå",20.9528,64.7507],["Visby",18.2948,57.6348],["Kiruna",20.2253,67.8558],["Karlskrona",15.5869,56.1612]];
+  const cities=CITIES.map(([n,lon,lat])=>({k:"c:"+n,n,c:proj([lon,lat]).map(v=>Math.round(v*10)/10),m:1,city:1}));
+  out.sverige={name:"Sverige",W:SW,H:SH,se:1,countries:cs,cities,context:ctx};
+  console.log("sverige",cs.length,"landskap",cities.length,"städer",Math.round(cs.reduce((a,c)=>a+c.d.length,0)/1024)+"KB");
+}
 const data=JSON.stringify({W,H,maps:out});
 const page=fs.readFileSync(__dirname+"/template.html","utf8").replace("__DATA__",()=>data);
 fs.writeFileSync(__dirname+"/../index.html",fs.readFileSync(__dirname+"/head.html","utf8")+page.split("\n").filter(l=>!l.includes("apple-mobile-web-app-capable")).join("\n")+"\n</body>\n</html>\n");
@@ -64,3 +97,10 @@ const fdir=path_.join(__dirname,"..","flags"); fs.rmSync(fdir,{recursive:true,fo
 const srcDir=path_.join(path_.dirname(require.resolve("flag-icons/package.json")),"flags","4x3");
 for(const f of usedFlags) fs.copyFileSync(path_.join(srcDir,f+".svg"),path_.join(fdir,f+".svg"));
 console.log("flags",usedFlags.size);
+
+// ---------- offline: service worker with a versioned cache ----------
+const crypto=require("crypto");
+const ver=crypto.createHash("sha1").update(fs.readFileSync(__dirname+"/../index.html")).digest("hex").slice(0,10);
+const pre=["./","index.html","apple-touch-icon.png","icon-512.png","manifest.webmanifest",...[...usedFlags].sort().map(f=>"flags/"+f+".svg")];
+fs.writeFileSync(__dirname+"/../sw.js",fs.readFileSync(__dirname+"/sw-template.js","utf8").replace("__VERSION__",ver).replace("__PRECACHE__",JSON.stringify(pre)));
+console.log("sw",ver,pre.length,"filer");

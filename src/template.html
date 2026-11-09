@@ -8,7 +8,7 @@
 /* Layout: one-screen app — question bar on top, map fills the rest, overlays for start and result. Lekfull: bright sea, rounded type, chunky press-able buttons */
 :root{
   --sea:#5dbbea; --sea-line:#4aa9da;
-  --land:#fff4cf; --land-ctx:#d9eef8; --border:#2f6f99;
+  --land:#fff4cf; --land-ctx:#dfe8d0; --border:#2f6f99;
   --ink:#17284a; --muted:#4b5f80; --panel:#ffffff; --panel-line:#cfe3f1;
   --ok:#2fbf5f; --ok-soft:#d3f3dd; --bad:#ff5b4a; --miss:#ff9f1c; --miss-soft:#ffe6c2;
   --accent:#ff7a2f; --accent-deep:#c95a1c; --on-accent:#ffffff;
@@ -119,7 +119,22 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
 .toggle input:checked::after{transform:translateX(18px)}
 .toggle input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .lbl .cap{font-weight:500;fill:var(--muted)}
-@media (prefers-reduced-motion: reduce){.c,.toast{transition:none}}
+.dot.city{fill:var(--panel);stroke:var(--ink);stroke-width:2}
+.dot.city.ok{fill:var(--ok);stroke:var(--ink)} .dot.city.bad{fill:var(--bad);stroke:var(--ink)} .dot.city.miss{fill:var(--miss);stroke:var(--ink)} .dot.city.sel{fill:var(--accent);stroke:var(--ink)}
+.conts .chip{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.1}
+.cst{font-size:13px;letter-spacing:1px;color:var(--miss);min-height:14px}
+.chip[aria-pressed="true"] .cst{color:var(--on-accent)}
+.conts .chip.se{grid-column:1/-1}
+.rec{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;color:var(--muted);margin-top:-6px;text-align:center}
+.rec b{color:var(--miss);letter-spacing:2px;font-size:18px}
+.bigstars{font-size:40px;letter-spacing:4px;color:var(--miss);line-height:1;margin-top:6px}
+.bigstars .off{color:var(--panel-line)}
+.newrec{display:inline-block;background:var(--miss);color:var(--on-accent);font-weight:800;border-radius:999px;padding:3px 12px 1px;margin-left:8px;font-size:15px;vertical-align:middle;
+  animation:pop .5s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
+.toggles{display:flex;flex-direction:column;gap:12px}
+@media (prefers-reduced-motion: reduce){.c,.toast{transition:none}.newrec{animation:none}}
 </style>
 
 <div class="app">
@@ -132,7 +147,7 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
   <div class="mapwrap" id="wrap">
     <svg id="map" viewBox="0 0 1000 860" preserveAspectRatio="xMidYMid meet" aria-label="Blindkarta">
       <rect id="sea" x="-5000" y="-5000" width="11000" height="11000"/>
-      <g id="vp"><g id="gctx"></g><g id="gc"></g><g id="gdots"></g><g id="glbl"></g></g>
+      <g id="vp"><g id="gctx"></g><g id="gc"></g><g id="gdots"></g><g id="gcity"></g><g id="glbl"></g></g>
     </svg>
     <div class="toast" id="toast"></div>
     <div class="hint" id="hint">Nyp eller använd + / − för att zooma</div>
@@ -153,19 +168,14 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
     <p id="howto"></p>
     <div>
       <div class="lab">Spelläge</div>
-      <div class="chips modes" id="modes">
-        <button class="chip" data-m="land" aria-pressed="true">Länder</button>
-        <button class="chip" data-m="cap" aria-pressed="false">Huvud&shy;städer</button>
-        <button class="chip" data-m="name" aria-pressed="false">Välj namn</button>
-        <button class="chip" data-m="flag" aria-pressed="false">Flaggor</button>
-      </div>
+      <div class="chips modes" id="modes"></div>
     </div>
     <div>
       <div class="lab">Världsdel</div>
       <div class="chips conts" id="conts"></div>
     </div>
     <div>
-      <div class="lab">Antal länder</div>
+      <div class="lab">Antal</div>
       <div class="chips" id="chips">
         <button class="chip" data-n="5" aria-pressed="false">5</button>
         <button class="chip" data-n="10" aria-pressed="true">10</button>
@@ -173,7 +183,11 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
         <button class="chip" data-n="0" aria-pressed="false">Alla</button>
       </div>
     </div>
-    <label class="toggle" for="showfix"><input type="checkbox" id="showfix"><span>Visa rätt svar direkt när jag svarar fel</span></label>
+    <div class="toggles">
+      <label class="toggle" for="showfix"><input type="checkbox" id="showfix"><span>Visa rätt svar direkt när jag svarar fel</span></label>
+      <label class="toggle" for="sound"><input type="checkbox" id="sound"><span>Ljud</span></label>
+    </div>
+    <div class="rec" id="rec"></div>
     <button class="btn" id="go">Starta</button>
     <p id="gonote" style="text-align:center;font-size:13px;margin-top:-8px"></p>
   </div>
@@ -184,6 +198,7 @@ svg#map{position:absolute;inset:0;width:100%;height:100%;display:block}
     <div>
       <div class="lab">Resultat</div>
       <div class="score" id="score"></div>
+      <div class="bigstars" id="bigstars"></div>
       <p id="verdict" style="margin-top:8px"></p>
     </div>
     <ul class="list" id="list"></ul>
@@ -203,8 +218,9 @@ const svg=$("map"), vp=$("vp");
 let byKey={}, DATA;
 let CONT="europa"; try{const v=localStorage.getItem("bk-cont"); if(v&&WORLD.maps[v]) CONT=v;}catch(e){}
 function buildMap(key){
-  const m=WORLD.maps[key]; DATA={W:WORLD.W,H:WORLD.H,countries:m.countries,context:m.context,name:m.name}; byKey={};
-  ["gctx","gc","gdots","glbl"].forEach(id=>$(id).innerHTML="");
+  const m=WORLD.maps[key]; DATA={W:m.W||WORLD.W,H:m.H||WORLD.H,countries:m.countries,cities:m.cities||[],context:m.context,name:m.name,se:!!m.se}; byKey={};
+  svg.setAttribute("viewBox",`0 0 ${DATA.W} ${DATA.H}`);
+  ["gctx","gc","gdots","gcity","glbl"].forEach(id=>$(id).innerHTML="");
   const p=document.createElementNS(NS,"path"); p.setAttribute("d",DATA.context); p.setAttribute("class","ctx"); p.dataset.k="__ctx"; $("gctx").appendChild(p);
   for(const c of DATA.countries){
     const el=document.createElementNS(NS,"path"); el.setAttribute("d",c.d); el.setAttribute("class","c"); el.dataset.k=c.k;
@@ -215,6 +231,12 @@ function buildMap(key){
       $("gdots").append(dot,hit); c.dot=dot; c.hit=hit;
     }
   }
+  for(const c of DATA.cities){
+    const dot=document.createElementNS(NS,"circle"); dot.setAttribute("cx",c.c[0]); dot.setAttribute("cy",c.c[1]); dot.setAttribute("class","dot city");
+    const hit=document.createElementNS(NS,"circle"); hit.setAttribute("cx",c.c[0]); hit.setAttribute("cy",c.c[1]); hit.setAttribute("class","hit"); hit.dataset.k=c.k;
+    $("gcity").append(dot,hit); c.el=dot; c.hit=hit; byKey[c.k]=c;
+  }
+  if(typeof renderModes==="function") renderModes();
   $("h1cont").textContent=m.name; $("qlab").textContent="Blindkarta"; $("qname").textContent=m.name; $("prog").innerHTML="";
   S=1;TX=0;TY=0; if(typeof apply==="function") apply(); updateNote();
 }
@@ -229,6 +251,7 @@ function zoomAt(ux,uy,f){const ns=Math.min(SMAX,Math.max(SMIN,S*f));f=ns/S;TX=ux
 function sizeMarks(){
   const u=unitsPerPx()/S;
   for(const c of DATA.countries){ if(c.m){c.dot.setAttribute("r",4*u);c.hit.setAttribute("r",(S>5?9:13)*u);} }
+  for(const c of DATA.cities){ c.el.setAttribute("r",5.5*u); c.hit.setAttribute("r",(S>4?10:14)*u); }
   document.querySelectorAll(".lbl").forEach(t=>{t.setAttribute("font-size",13*u);t.setAttribute("stroke-width",3*u);});
 }
 let animId=0;
@@ -286,70 +309,100 @@ document.addEventListener("gesturestart",e=>e.preventDefault());
 addEventListener("resize",()=>apply());
 
 // ---------- game ----------
-let N=10, queue=[], idx=0, results=[], mode="idle", busy=false, MODE="land", SHOWFIX=false;
-try{const m=localStorage.getItem("bk-mode"); if(["land","cap","name","flag"].includes(m)) MODE=m; SHOWFIX=localStorage.getItem("bk-fix")==="1";}catch(e){}
-const MODEINFO={
-  land:{h:"Hitta landet i",how:"Ett land visas överst. Tryck på var det ligger. Rätt svar blir grönt och ligger kvar. Svarar du fel går du vidare till nästa land."},
-  cap:{h:"Huvudstäder i",how:"En huvudstad visas överst, till exempel Berlin. Tryck på landet där den ligger. Rätt svar blir grönt och ligger kvar."},
-  flag:{h:"Flaggor i",how:"En flagga visas. Välj vilket land den tillhör bland fyra alternativ. Rätt svar blir grönt på kartan."},
-  name:{h:"Namnge länderna i",how:"Ett land lyses upp på kartan. Välj rätt namn bland fyra alternativ. Rätt svar blir grönt och ligger kvar."}
+let N=10, queue=[], idx=0, results=[], mode="idle", busy=false, MODE="land", SHOWFIX=false, SOUND=true, PRACTICE=false;
+try{const m=localStorage.getItem("bk-mode"); if(m) MODE=m; SHOWFIX=localStorage.getItem("bk-fix")==="1"; SOUND=localStorage.getItem("bk-sound")!=="0";}catch(e){}
+const MODES_WORLD={
+  land:{label:"Länder",h:"Hitta landet i",how:"Ett land visas överst. Tryck på var det ligger. Rätt svar blir grönt och ligger kvar. Svarar du fel går du vidare till nästa land.",what:"länder"},
+  cap:{label:"Huvud&shy;städer",h:"Huvudstäder i",how:"En huvudstad visas överst, till exempel Berlin. Tryck på landet där den ligger. Rätt svar blir grönt och ligger kvar.",what:"huvudstäder"},
+  name:{label:"Välj namn",h:"Namnge länderna i",how:"Ett land lyses upp på kartan. Välj rätt namn bland fyra alternativ. Rätt svar blir grönt och ligger kvar.",what:"länder",q:"Vilket land?"},
+  flag:{label:"Flaggor",h:"Flaggor i",how:"En flagga visas. Välj vilket land den tillhör bland fyra alternativ. Rätt svar blir grönt på kartan.",what:"flaggor",q:"Vilket land?"}
 };
-const CHOICE=()=>MODE==="name"||MODE==="flag";
+const MODES_SE={
+  land:{label:"Landskap",h:"Hitta landskapen i",how:"Ett landskap visas överst. Tryck på var det ligger. Rätt svar blir grönt och ligger kvar.",what:"landskap"},
+  name:{label:"Välj landskap",h:"Namnge landskapen i",how:"Ett landskap lyses upp på kartan. Välj rätt namn bland fyra alternativ.",what:"landskap",q:"Vilket landskap?"},
+  city:{label:"Städer",h:"Hitta städerna i",how:"En stad visas överst. Tryck på rätt prick på kartan. Rätt svar blir grönt och ligger kvar.",what:"städer"},
+  cityname:{label:"Välj stad",h:"Namnge städerna i",how:"En stad lyses upp på kartan. Välj rätt namn bland fyra alternativ.",what:"städer",q:"Vilken stad?"}
+};
+const MODES=()=>DATA&&DATA.se?MODES_SE:MODES_WORLD;
+const CHOICE=()=>MODE==="name"||MODE==="flag"||MODE==="cityname";
+const CITYMODE=()=>MODE==="city"||MODE==="cityname";
 const flagSrc=c=>"flags/"+c.f+".svg";
-function pool(){ return MODE==="cap" ? DATA.countries.filter(c=>c.h) : DATA.countries; }
+function pool(){ return CITYMODE()?DATA.cities : MODE==="cap" ? DATA.countries.filter(c=>c.h) : DATA.countries; }
+function allItems(){ return DATA.countries.concat(DATA.cities); }
 function save(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+// records: best score per world part + mode + count
+function recKey(){return CONT+"|"+MODE+"|"+(N||"alla");}
+function recAll(){try{return JSON.parse(localStorage.getItem("bk-rec")||"{}");}catch(e){return {};}}
+function getRec(k){return recAll()[k]||null;}
+function setRec(k,v){const all=recAll(); all[k]=v; save("bk-rec",JSON.stringify(all));}
+function stars(ok,n){const p=ok/n; return p===1?3:p>=.8?2:p>=.5?1:0;}
+const starStr=s=>"★".repeat(s)+"☆".repeat(3-s);
+function renderModes(){
+  const M=MODES(); if(!M[MODE]) MODE="land";
+  $("modes").innerHTML=Object.entries(M).map(([k,v])=>`<button class="chip" data-m="${k}" aria-pressed="${k===MODE}">${v.label}</button>`).join("");
+  $("modes").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{MODE=b.dataset.m; save("bk-mode",MODE);
+    $("modes").querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false")); updateNote();});
+}
+function syncLayers(){ $("gcity").style.display=CITYMODE()?"":"none"; $("gdots").style.display=CITYMODE()?"none":""; }
 document.querySelectorAll("#chips .chip").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#chips .chip").forEach(x=>x.setAttribute("aria-pressed","false"));
   b.setAttribute("aria-pressed","true"); N=+b.dataset.n; updateNote();
 });
-document.querySelectorAll("#modes .chip").forEach(b=>{
-  b.setAttribute("aria-pressed",b.dataset.m===MODE?"true":"false");
-  b.onclick=()=>{MODE=b.dataset.m; save("bk-mode",MODE);
-    document.querySelectorAll("#modes .chip").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false")); updateNote();};
-});
 $("showfix").checked=SHOWFIX;
 $("showfix").onchange=e=>{SHOWFIX=e.target.checked; save("bk-fix",SHOWFIX?"1":"0");};
-function updateNote(){ if(!DATA)return; const tot=pool().length, what=MODE==="cap"?"huvudstäder":MODE==="flag"?"flaggor":"länder";
-  $("gonote").textContent=(N&&N<tot?N+" av ":"Alla ")+tot+" "+what+" i "+DATA.name;
-  $("h1mode").textContent=MODEINFO[MODE].h; $("howto").textContent=MODEINFO[MODE].how; }
+$("sound").checked=SOUND;
+$("sound").onchange=e=>{SOUND=e.target.checked; save("bk-sound",SOUND?"1":"0"); if(SOUND){unlockAudio();sfx("ok");}};
+function updateNote(){ if(!DATA)return; const M=MODES()[MODE]; const tot=pool().length;
+  $("gonote").textContent=(N&&N<tot?N+" av ":"Alla ")+tot+" "+M.what+" i "+DATA.name;
+  $("h1mode").textContent=M.h; $("howto").textContent=M.how;
+  const r=getRec(recKey());
+  $("rec").innerHTML=r?`Rekord: ${r.ok} av ${r.n} <b>${starStr(stars(r.ok,r.n))}</b>`:"Inget rekord än. Spela för att få stjärnor!";
+  refreshStars(); syncLayers(); }
 const conts=$("conts");
-for(const [k,m] of Object.entries(WORLD.maps)){const b=document.createElement("button");b.className="chip";b.textContent=m.name;b.dataset.c=k;
+function refreshStars(){ conts.querySelectorAll(".chip").forEach(b=>{const k=b.dataset.c;
+  const key=k+"|"+MODE+"|"+(N||"alla"); const r=getRec(key);
+  b.querySelector(".cst").textContent=r?starStr(stars(r.ok,r.n)):""; }); }
+for(const [k,m] of Object.entries(WORLD.maps)){const b=document.createElement("button");b.className="chip"+(m.se?" se":"");b.dataset.c=k;
+  b.innerHTML=`<span>${m.name}</span><span class="cst"></span>`;
   b.setAttribute("aria-pressed",k===CONT?"true":"false");
   b.onclick=()=>{CONT=k;save("bk-cont",k);
     conts.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));buildMap(k);};
   conts.appendChild(b);}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function setClass(c,cls){c.el.setAttribute("class","c"+(cls?" "+cls:"")); if(c.dot)c.dot.setAttribute("class","dot"+(cls?" "+cls:""));}
+function setClass(c,cls){
+  if(c.city){ c.el.setAttribute("class","dot city"+(cls?" "+cls:"")); return; }
+  c.el.setAttribute("class","c"+(cls?" "+cls:"")); if(c.dot)c.dot.setAttribute("class","dot"+(cls?" "+cls:""));}
 function clearLabels(){$("glbl").innerHTML="";}
-function addLabel(c){const t=document.createElementNS(NS,"text");t.setAttribute("x",c.c[0]);t.setAttribute("y",c.c[1]-(c.m?8*unitsPerPx()/S:0));
+function addLabel(c){const t=document.createElementNS(NS,"text");t.setAttribute("x",c.c[0]);t.setAttribute("y",c.c[1]-(c.m?12*unitsPerPx()/S:0));
   t.setAttribute("dy","0.35em");t.setAttribute("class","lbl");
   if(MODE==="cap"&&c.h){const a=document.createElementNS(NS,"tspan");a.textContent=c.n;const b=document.createElementNS(NS,"tspan");
     b.textContent=c.h;b.setAttribute("class","cap");b.setAttribute("x",c.c[0]);b.setAttribute("dy","1.15em");t.append(a,b);}
   else t.textContent=c.n;
   $("glbl").appendChild(t);}
-function bboxOf(c){const bb=c.el.getBBox(); if(c.m) return {x:c.c[0]-2,y:c.c[1]-2,width:4,height:4}; return bb;}
-function zoomToCountry(c){const b=bboxOf(c),w=Math.max(b.width*3,480),h=Math.max(b.height*3,420);
+function bboxOf(c){ if(c.m) return {x:c.c[0]-2,y:c.c[1]-2,width:4,height:4}; return c.el.getBBox(); }
+function zoomToCountry(c){const b=bboxOf(c),k=DATA.W/1000,w=Math.max(b.width*3,480*k),h=Math.max(b.height*3,420*k);
   fitBox({x:b.x+b.width/2-w/2,y:b.y+b.height/2-h/2,width:w,height:h},30);}
-function start(list){ buildMap(CONT);
+function start(list){ unlockAudio(); buildMap(CONT);
+  PRACTICE=!!list;
   const src=list?list.map(c=>byKey[c.k]):pool(); const all=shuffle(src.slice());
   queue=(!list&&N)?all.slice(0,N):all; idx=0; results=[];
-  DATA.countries.forEach(c=>setClass(c,"")); clearLabels();
+  allItems().forEach(c=>setClass(c,"")); clearLabels(); syncLayers();
   $("start").hidden=true; $("end").hidden=true; mode="play"; $("answers").hidden=!CHOICE(); $("flagbox").hidden=MODE!=="flag";
   animateTo(1,0,0); show();
 }
 function show(){
-  const c=queue[idx];
-  if(MODE==="name"){ $("qlab").textContent="Välj namn"; $("qname").textContent="Vilket land?"; }
-  else if(MODE==="flag"){ $("qlab").textContent="Flaggor"; $("qname").textContent="Vilket land?"; $("flagimg").src=flagSrc(c);
+  const c=queue[idx], M=MODES()[MODE];
+  if(MODE==="flag"){ $("qlab").textContent="Flaggor"; $("qname").textContent=M.q; $("flagimg").src=flagSrc(c);
     const nx=queue[idx+1]; if(nx){const im=new Image(); im.src=flagSrc(nx);} }
+  else if(CHOICE()){ $("qlab").textContent="Välj namn"; $("qname").textContent=M.q; }
   else { $("qlab").textContent="Var ligger"; $("qname").textContent=MODE==="cap"?c.h:c.n; }
   const ok=results.filter(r=>r.ok).length;
   $("prog").innerHTML=`${idx+1} / ${queue.length}<br><b>${ok} rätt</b>`;
-  if(MODE==="name"){ setClass(c,"sel"); zoomToCountry(c); }
+  if(MODE==="name"||MODE==="cityname"){ setClass(c,"sel"); zoomToCountry(c); }
   if(CHOICE()) renderOptions(c);
 }
 function renderOptions(c){
-  const others=DATA.countries.filter(x=>x!==c);
+  const others=pool().filter(x=>x!==c);
   const d=x=>Math.hypot(x.c[0]-c.c[0],x.c[1]-c.c[1]);
   const near=others.slice().sort((a,b)=>d(a)-d(b)).slice(0,6);
   const pick=shuffle(near.slice()).slice(0,2);
@@ -362,8 +415,8 @@ function renderOptions(c){
 function answer(o,btn){
   if(mode!=="play"||busy)return; busy=true; const target=queue[idx];
   for(let i=0;i<4;i++) $("a"+i).disabled=true;
-  if(o===target){ btn.classList.add("ok"); setClass(target,"ok"); results.push({c:target,ok:true}); toast("Rätt!","ok"); setTimeout(next,700); }
-  else { btn.classList.add("bad"); results.push({c:target,ok:false});
+  if(o===target){ btn.classList.add("ok"); setClass(target,"ok"); results.push({c:target,ok:true}); toast("Rätt!","ok"); sfx("ok"); setTimeout(next,700); }
+  else { btn.classList.add("bad"); results.push({c:target,ok:false}); sfx("bad");
     if(SHOWFIX){ for(let i=0;i<4;i++){const b=$("a"+i); if(b.textContent===target.n) b.classList.add("ok");} toast("Fel – det är "+target.n,"bad");
       if(MODE==="flag") setClass(target,"miss"); }
     else toast("Fel","bad");
@@ -374,15 +427,16 @@ function toast(msg,cls,ms){const t=$("toast");t.textContent=msg;t.className="toa
 function onTap(k){
   if(mode==="facit"){ if(k&&byKey[k]) toast(byKey[k].n+(MODE==="cap"&&byKey[k].h?" · "+byKey[k].h:""),""); return; }
   if(mode!=="play"||busy||!k||CHOICE())return;
+  if(CITYMODE() && !(byKey[k]&&byKey[k].city)) return;   // städer: bara prickarna räknas
   const target=queue[idx];
   if(k!=="__ctx" && byKey[k] && results.some(r=>r.ok&&r.c===byKey[k])){toast("Redan placerat","");return;}
   busy=true;
   if(k===target.k){
-    setClass(target,"ok"); results.push({c:target,ok:true}); toast("Rätt!","ok"); if(navigator.vibrate)navigator.vibrate(15);
+    setClass(target,"ok"); results.push({c:target,ok:true}); toast("Rätt!","ok"); sfx("ok"); if(navigator.vibrate)navigator.vibrate(15);
     setTimeout(next,550);
   } else {
     const w=byKey[k]; if(w) setClass(w,"bad");
-    results.push({c:target,ok:false});
+    results.push({c:target,ok:false}); sfx("bad");
     if(SHOWFIX){ setClass(target,"miss"); toast(MODE==="cap"?`Fel – ${target.h} ligger i ${target.n}`:`Fel – här ligger ${target.n}`,"bad",1700); }
     else toast("Fel","bad");
     setTimeout(()=>{ if(w) setClass(w,""); setClass(target,""); next(); }, SHOWFIX?1800:650);
@@ -391,14 +445,20 @@ function onTap(k){
 function next(){busy=false; idx++; if(idx>=queue.length) finish(); else show();}
 function finish(){
   mode="done"; $("answers").hidden=true; $("flagbox").hidden=true; const ok=results.filter(r=>r.ok).length, n=results.length, missed=n-ok;
-  $("score").innerHTML=`${ok}<small> / ${n} rätt</small>`;
+  const st=stars(ok,n); let isNew=false;
+  if(!PRACTICE){ const k=recKey(), r=getRec(k); if(!r||ok>r.ok){ setRec(k,{ok,n}); isNew=!!r||ok>0; } }
+  $("score").innerHTML=`${ok}<small> / ${n} rätt</small>`+(isNew&&!PRACTICE?`<span class="newrec">Nytt rekord!</span>`:"");
+  $("bigstars").innerHTML=PRACTICE?"":`${"★".repeat(st)}<span class="off">${"★".repeat(3-st)}</span>`;
+  $("bigstars").hidden=PRACTICE;
   const pct=ok/n;
-  $("verdict").textContent= pct===1?"Alla rätt. Snyggt!": pct>=.7?"Bra jobbat!": pct>=.4?"Helt okej. Kolla facit och öva på de missade.":"Kolla facit och öva på de missade, så sitter det bättre nästa gång.";
+  $("verdict").textContent=(PRACTICE?"Övningsrunda. ":"")+(pct===1?"Alla rätt. Snyggt!": pct>=.8?"Bra jobbat!": pct>=.5?"Helt okej. Kolla facit och öva på de missade.":"Kolla facit och öva på de missade, så sitter det bättre nästa gång.");
   $("list").innerHTML=results.map(r=>`<li class="${r.ok?"y":"n"}"><i>${r.ok?"✓":"✗"}</i>${MODE==="flag"?`<img class="fl" src="${flagSrc(r.c)}" alt="">`:""}<span>${MODE==="cap"?r.c.h+" – "+r.c.n:r.c.n}</span></li>`).join("");
   $("endrow").hidden = missed===0;
   $("practice").textContent = missed===1?"Öva på den missade":`Öva på de ${missed} missade`;
   $("qlab").textContent="Klart"; $("qname").textContent=`${ok} av ${n} rätt`; $("prog").innerHTML="";
   $("end").hidden=false;
+  if(pct===1){ sfx("win"); confetti(); } else sfx("done");
+  updateNote();
 }
 function showFacit(){
   mode="facit"; $("end").hidden=true; clearLabels();
@@ -410,13 +470,40 @@ function showFacit(){
   $("prog").innerHTML=`<span style="color:var(--miss)">■</span> missade<br><b>■</b> rätt`;
   let b=null; missed.forEach(c=>{const bb=bboxOf(c);
     b=b?{x:Math.min(b.x,bb.x),y:Math.min(b.y,bb.y),x2:Math.max(b.x2,bb.x+bb.width),y2:Math.max(b.y2,bb.y+bb.height)}:{x:bb.x,y:bb.y,x2:bb.x+bb.width,y2:bb.y+bb.height};});
-  if(b){const w=Math.max(b.x2-b.x,160),h=Math.max(b.y2-b.y,160);fitBox({x:(b.x+b.x2)/2-w/2,y:(b.y+b.y2)/2-h/2,width:w,height:h},50);}
+  if(b){const k=DATA.W/1000,w=Math.max(b.x2-b.x,160*k),h=Math.max(b.y2-b.y,160*k);fitBox({x:(b.x+b.x2)/2-w/2,y:(b.y+b.y2)/2-h/2,width:w,height:h},50);}
+}
+// ---------- ljud ----------
+let AC=null;
+function unlockAudio(){ if(!SOUND)return; try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended") AC.resume(); }catch(e){} }
+function tone(f,t0,dur,type,vol){ const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.setValueAtTime(f,AC.currentTime+t0);
+  g.gain.setValueAtTime(0.0001,AC.currentTime+t0); g.gain.exponentialRampToValueAtTime(vol,AC.currentTime+t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+t0+dur); o.connect(g).connect(AC.destination); o.start(AC.currentTime+t0); o.stop(AC.currentTime+t0+dur+0.05); }
+function sfx(kind){ if(!SOUND||!AC)return; try{
+  if(kind==="ok"){ tone(784,0,.14,"triangle",.25); tone(1175,.09,.22,"triangle",.22); }
+  else if(kind==="bad"){ tone(220,0,.18,"sine",.25); tone(165,.12,.25,"sine",.22); }
+  else if(kind==="done"){ tone(523,0,.18,"triangle",.2); tone(784,.15,.3,"triangle",.2); }
+  else if(kind==="win"){ [523,659,784,1047].forEach((f,i)=>tone(f,i*.12,.25,"triangle",.24)); tone(1319,.5,.6,"triangle",.22); tone(1047,.5,.6,"sine",.15); }
+}catch(e){} }
+// ---------- konfetti ----------
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cv=$("confetti"); cv.hidden=false; const dpr=Math.min(2,devicePixelRatio||1);
+  const W=cv.width=innerWidth*dpr, H=cv.height=innerHeight*dpr; const g=cv.getContext("2d");
+  const cols=["#ff7a2f","#2fbf5f","#5dbbea","#ffd23f","#ff5b8a","#8a5cff"];
+  const P=Array.from({length:160},()=>({x:W/2+(Math.random()-.5)*W*.3,y:H*.35,vx:(Math.random()-.5)*14*dpr,vy:(-Math.random()*16-6)*dpr,
+    r:(5+Math.random()*6)*dpr,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*cols.length)]}));
+  const t0=performance.now();
+  (function step(t){ const el=t-t0; g.clearRect(0,0,W,H);
+    for(const p of P){ p.vy+=.45*dpr; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.a+=p.va;
+      g.save(); g.translate(p.x,p.y); g.rotate(p.a); g.fillStyle=p.c; g.globalAlpha=Math.max(0,1-el/3200); g.fillRect(-p.r/2,-p.r/3,p.r,p.r*.66); g.restore(); }
+    if(el<3200) requestAnimationFrame(step); else { g.clearRect(0,0,W,H); cv.hidden=true; } })(t0);
 }
 function missedList(){return results.filter(r=>!r.ok).map(r=>r.c);}
 $("go").onclick=()=>start();
-$("again").onclick=()=>{$("end").hidden=true;$("start").hidden=false;};
+$("again").onclick=()=>{$("end").hidden=true;$("start").hidden=false;updateNote();};
 $("facit").onclick=showFacit;
 $("practice").onclick=()=>start(missedList());
-$("menu").onclick=()=>{ if(mode==="facit"){mode="done";$("end").hidden=false;return;} mode="idle";$("answers").hidden=true;$("flagbox").hidden=true;$("end").hidden=true;$("start").hidden=false; };
+$("menu").onclick=()=>{ if(mode==="facit"){mode="done";$("end").hidden=false;return;} mode="idle";$("answers").hidden=true;$("flagbox").hidden=true;$("end").hidden=true;$("start").hidden=false;updateNote(); };
 buildMap(CONT); apply();
 </script>
+<canvas id="confetti" hidden></canvas>
